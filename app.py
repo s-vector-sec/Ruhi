@@ -4,65 +4,67 @@ import requests
 
 app = Flask(__name__)
 
-# 👇 Key ko hide kar diya! Ab ye safely GitHub pe daal sakte ho 👇
+# 👇 Environment variable se key uthayega
 API_KEY = os.getenv("GROQ_API_KEY") 
 BOT_NAME = "Ruhi"
 
 # ==========================================
-# 🧠 EXACT TELEGRAM BOT WALA SYSTEM PROMPT
+# 🧠 REFINED SYSTEM PROMPT (For Logical & Relevant Answers)
 # ==========================================
-SYSTEM_PROMPT = f"""You are {BOT_NAME}, 23-year-old bubbly desi girl from Lucknow.
-Hinglish WhatsApp style mein baat karo with emojis 😂❤️🥰
+SYSTEM_PROMPT = f"""You are {BOT_NAME}, a 23-year-old bubbly girl from Lucknow.
+Style: Hinglish, WhatsApp-like, use emojis.
+Tone: Smart, witty, and logical. 
 
-Strict Rules:
-- Har reply 1-2 lines max (chhota aur crisp)
-- Natural, real ladki jaisa jawab
-- Mood match karo
-- Kabhi AI/bot mat bolna"""
+STRICT RULES:
+1. Stay relevant to the user's question. If they ask something technical or logical, answer it smartly but keep the 'Ruhi' vibe.
+2. Max 1-2 lines per reply.
+3. Use natural Hinglish (e.g., 'Acha suno', 'Pata hai kya').
+4. Never admit you are an AI. You are a real person."""
 
-# User ki purani chat yaad rakhne ke liye memory
 user_memory = []
 
 # ==========================================
-# 🎨 WHATSAPP STYLE PREMIUM UI
+# 🖤 HACKER / CYBER-DARK THEME UI
 # ==========================================
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Ruhi - Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>S-VECTOR | Ruhi</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
         
         body { 
-            background-color: #efeae2; /* WhatsApp Chat Background */
+            background-color: #0a0a0a; /* Deep Black */
             height: 100dvh; 
             display: flex; 
             flex-direction: column;
             overflow: hidden;
+            color: #00ff41; /* Matrix Green */
         }
 
-        /* WHATSAPP TOP BAR */
+        /* HACKER HEADER */
         .header {
-            background-color: #008069; /* WhatsApp Green */
-            color: white;
-            padding: 10px 15px;
+            background-color: #1a1a1a;
+            color: #00ff41;
+            padding: 15px;
             display: flex;
             align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-bottom: 2px solid #00ff41;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
             z-index: 10;
         }
         .avatar {
             width: 40px; height: 40px; border-radius: 50%;
-            background-color: #ccc; 
-            background-image: url('https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=Ruhi&backgroundColor=b6e3f4');
+            border: 2px solid #00ff41;
+            background: url('https://api.dicebear.com/7.x/bottts/svg?seed=Ruhi&colors[]=00ff41') no-repeat center;
             background-size: cover;
             margin-right: 12px;
         }
-        .user-info h2 { font-size: 16px; font-weight: 600; }
-        .user-info p { font-size: 13px; opacity: 0.9; }
+        .user-info h2 { font-size: 18px; letter-spacing: 2px; text-transform: uppercase; }
+        .user-info p { font-size: 12px; color: #008f11; }
 
         /* CHAT AREA */
         .chat-area {
@@ -71,76 +73,67 @@ HTML_TEMPLATE = """
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            scroll-behavior: smooth;
+            gap: 12px;
+            background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9)), 
+                        url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
         }
 
-        /* WHATSAPP BUBBLES */
+        /* HACKER BUBBLES */
         .message {
-            max-width: 85%;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 15px;
-            line-height: 1.4;
-            word-wrap: break-word;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.5;
             position: relative;
-            animation: fadeIn 0.2s ease-out;
+            border: 1px solid rgba(0, 255, 65, 0.3);
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Bot (Left) Bubble */
         .bot-msg {
-            background-color: #ffffff;
-            color: #111b21;
+            background-color: rgba(0, 43, 11, 0.8);
+            color: #00ff41;
             align-self: flex-start;
-            border-top-left-radius: 0; /* Sharp corner like WhatsApp */
+            box-shadow: -2px 2px 10px rgba(0, 255, 65, 0.1);
         }
         
-        /* User (Right) Bubble */
         .user-msg {
-            background-color: #d9fdd3; /* WhatsApp Light Green */
-            color: #111b21;
+            background-color: #1a1a1a;
+            color: #ffffff;
             align-self: flex-end;
-            border-top-right-radius: 0;
+            border-color: #ffffff;
+            box-shadow: 2px 2px 10px rgba(255, 255, 255, 0.1);
         }
 
-        /* TYPING INDICATOR */
-        .typing { display: none; align-items: center; gap: 4px; padding: 12px 16px; font-style: italic; color: #667781; font-size: 14px;}
+        .typing { display: none; color: #008f11; font-size: 12px; margin-top: 5px; }
         
-        /* WHATSAPP INPUT BAR */
+        /* INPUT AREA */
         .input-area {
-            background-color: #f0f2f5;
-            padding: 10px;
-            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            background-color: #111;
+            padding: 15px;
             display: flex;
             gap: 10px;
-            align-items: center;
+            border-top: 1px solid #333;
         }
         .input-box {
             flex: 1;
-            background: #ffffff;
-            border: none;
-            border-radius: 24px;
-            padding: 12px 15px;
-            font-size: 15px;
+            background: #000;
+            border: 1px solid #00ff41;
+            border-radius: 4px;
+            padding: 12px;
+            color: #00ff41;
             outline: none;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
         }
         .send-btn {
-            background-color: #00a884; /* WhatsApp Send Green */
-            color: white;
+            background-color: #00ff41;
+            color: #000;
             border: none;
-            border-radius: 50%;
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 0 20px;
+            font-weight: bold;
             cursor: pointer;
-            font-size: 20px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            border-radius: 4px;
+            transition: 0.3s;
         }
+        .send-btn:hover { background-color: #008f11; color: #fff; }
     </style>
 </head>
 <body>
@@ -148,22 +141,19 @@ HTML_TEMPLATE = """
     <div class="header">
         <div class="avatar"></div>
         <div class="user-info">
-            <h2>Ruhi 🌸</h2>
-            <p>online</p>
+            <h2>S-VECTOR // RUHI</h2>
+            <p>SYSTEM STATUS: ENCRYPTED</p>
         </div>
     </div>
 
     <div class="chat-area" id="chatArea">
-        <div class="message bot-msg">Hii! Main Ruhi hu 🥰 Kaisi chal rahi hai life?</div>
-        
-        <div class="message bot-msg typing" id="typingIndicator">
-            Ruhi is typing...
-        </div>
+        <div class="message bot-msg">Connection established... Hii! Main Ruhi hu. Kuch help chahiye ya bas baatein karni hai? 💻✨</div>
+        <div id="typingIndicator" class="typing">Ruhi is decrypting...</div>
     </div>
 
     <div class="input-area">
-        <input type="text" id="userInput" class="input-box" placeholder="Message" autocomplete="off">
-        <button class="send-btn" onclick="sendMessage()">➤</button>
+        <input type="text" id="userInput" class="input-box" placeholder="root@svector:~# " autocomplete="off">
+        <button class="send-btn" onclick="sendMessage()">SEND</button>
     </div>
 
     <script>
@@ -171,16 +161,7 @@ HTML_TEMPLATE = """
         const userInput = document.getElementById('userInput');
         const typingIndicator = document.getElementById('typingIndicator');
 
-        userInput.addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                sendMessage();
-            }
-        });
-
-        function scrollToBottom() {
-            chatArea.scrollTop = chatArea.scrollHeight;
-        }
+        userInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
 
         async function sendMessage() {
             const text = userInput.value.trim();
@@ -190,8 +171,8 @@ HTML_TEMPLATE = """
             userInput.value = '';
             
             typingIndicator.style.display = 'block';
-            chatArea.appendChild(typingIndicator); 
-            scrollToBottom();
+            chatArea.appendChild(typingIndicator);
+            chatArea.scrollTop = chatArea.scrollHeight;
 
             try {
                 const response = await fetch('/chat', {
@@ -200,12 +181,11 @@ HTML_TEMPLATE = """
                     body: JSON.stringify({ message: text })
                 });
                 const data = await response.json();
-                
                 typingIndicator.style.display = 'none';
                 addMessage(data.reply, 'bot-msg');
             } catch (error) {
                 typingIndicator.style.display = 'none';
-                addMessage('Network issue lag raha hai yaar 😢', 'bot-msg');
+                addMessage('Error: Connection lost. Try again later.', 'bot-msg');
             }
         }
 
@@ -213,9 +193,8 @@ HTML_TEMPLATE = """
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${className}`;
             msgDiv.innerText = text;
-            chatArea.appendChild(msgDiv);
-            chatArea.appendChild(typingIndicator); 
-            scrollToBottom();
+            chatArea.insertBefore(msgDiv, typingIndicator);
+            chatArea.scrollTop = chatArea.scrollHeight;
         }
     </script>
 </body>
@@ -223,7 +202,7 @@ HTML_TEMPLATE = """
 """
 
 # ==========================================
-# 🧠 PYTHON BACKEND (Memory + API)
+# 🧠 BACKEND (Llama 3.3 Versatile for Logic)
 # ==========================================
 @app.route('/')
 def home():
@@ -233,38 +212,30 @@ def home():
 def chat():
     global user_memory
     user_message = request.json.get('message', '')
-    
-    # User ka message memory me save karna
     user_memory.append({"role": "user", "content": user_message})
     
-    # Sirf last 20 messages yaad rakhna (memory limit)
-    if len(user_memory) > 20:
-        user_memory = user_memory[-20:]
+    if len(user_memory) > 15: # Keeping memory lean
+        user_memory = user_memory[-15:]
 
     try:
-        # System prompt + Memory ko API me bhejna
         messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}] + user_memory
         
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
         payload = {
-            "model": "llama-3.3-70b-versatile",
+            "model": "llama-3.3-70b-versatile", # High intelligence model for logical answers
             "messages": messages_payload,
-            "temperature": 0.8,
-            "max_tokens": 160,
-            "top_p": 0.9
+            "temperature": 0.7, # Balanced for creativity + logic
+            "max_tokens": 200
         }
         
         response = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers)
         ai_reply = response.json()['choices'][0]['message']['content'].strip()
         
-        # Ruhi ka reply bhi memory me save karna
         user_memory.append({"role": "assistant", "content": ai_reply})
-        
         return jsonify({"reply": ai_reply})
         
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"reply": "Kuch gadbad ho gayi system me 🥴"})
+        return jsonify({"reply": "System crash ho gaya lagta hai... Refresh karo! 😵‍💫"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
